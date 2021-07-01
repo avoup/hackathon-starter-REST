@@ -1,0 +1,5 @@
+- XSS sanitize
+- JSON:API responses **done**
+- oAuths
+- file upload
+- resend email verification
