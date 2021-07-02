@@ -15,7 +15,7 @@ Best part of working on a project is the 'meaty' part of it, but you have to go 
 
 Goal of hackathon-starter-REST (HSR) is to skip through all this steps and get to the interesting part of a project quicker.
 
-The code is as simple as it gets, it is thoroughly documented, and can be easily changed to suit your need.
+The code is as simple as it gets, it is thoroughly documented and can be easily changed to suit your needs.
 
 
 Table of Contents
@@ -128,54 +128,54 @@ You can use SendGrid for sending emails.  The developer tier allows you to send 
 - Sign up and **confirm** your account via the *activation email*
 - Then enter your SendGrid *API Key* into `.env` file as SENDGRID_API_KEY
 
-If using an SMTP service provider instead of SendGrid:
-- Set SMTP_USER and SMTP_PASSWORD in `.env`, and remove SENDGRID_API_KEY
 
 <hr>
 
 Project Structure
 -----------------
 
-| Name                               | Description                                                  |
-| ---------------------------------- | ------------------------------------------------------------ |
-| **config**/passport.js             | Passport authentication strategies.  |
-| **controllers**/             | Controllers.              |
-| **models**/User.js                 | Mongoose schema and model for User.                          |
-| .env.example                       | Environmental variables.           |
-| .gitignore                         | Folder and files ignored by git.                             |
-| .travis.yml                        | Configuration files for continuous integration.              |
-| app.js                             | The main application file.                                   |
-| package.json                       | NPM dependencies.                                            |
-| package-lock.json                  | Contains exact versions of NPM dependencies in package.json. |
+| Name                   | Description                                                  |
+| ---------------------- | ------------------------------------------------------------ |
+| **config**/passport.js | Passport authentication strategies.                          |
+| **controllers**/       | Controllers.                                                 |
+| **models**/User.js     | Mongoose schema and model for User.                          |
+| .env.example           | Environmental variables.                                     |
+| .gitignore             | Folder and files ignored by git.                             |
+| .travis.yml            | Configuration files for continuous integration.              |
+| app.js                 | The main application file.                                   |
+| package.json           | NPM dependencies.                                            |
+| package-lock.json      | Contains exact versions of NPM dependencies in package.json. |
 
 
 List of Packages
 ----------------
 
 ### Dependencies
-| Package                         | Description                                                             |
-| ------------------------------- | ------------------------------------------------------------------------|
-| @sendgrid/mail                  | Library for using Sendgrid api |
-| bcryptjs                        | Library for hashing and salting user passwords.                         |
-| chalk                           | For stileing terminal output.                                     |
-| compression  | For compressing response data  |
-| cors  | For enabling cors  |
-| dotenv  | For loading environment variables from .env file  |
-| express  | Express js server  |
-| helmet  | For setting http headers  |
-| jsonwebtoken  | For generating and decripting jwt tokens  |
-| mongoose  | For connecting to a mongodb  |
-| morgan  | For logging requests  |
-| multer  | For handling file uploads  |
-| passport  | For handling authentication  |
-| passport-google-oauth2  | For handling google auth  |
-| passport-jwt  | For authenticating using jwt  |
-| passport-local  | For handling authentication with mail and password |
-| validator  | For validating and sanitizing request data  |
+| Package                | Description                                        |
+| ---------------------- | -------------------------------------------------- |
+| @sendgrid/mail         | Library for using Sendgrid api                     |
+| bcryptjs               | Library for hashing and salting user passwords.    |
+| chalk                  | For stileing terminal output.                      |
+| compression            | For compressing response data                      |
+| cors                   | For enabling cors                                  |
+| dotenv                 | For loading environment variables from .env file   |
+| express                | Express js                                         |
+| helmet                 | For setting http headers                           |
+| jsonwebtoken           | For generating and decripting jwt tokens           |
+| mongoose               | For connecting to a mongodb                        |
+| morgan                 | For logging requests                               |
+| multer                 | For handling file uploads                          |
+| passport               | For handling authentication                        |
+| passport-google-oauth2 | For handling google auth                           |
+| passport-jwt           | For authenticating using jwt                       |
+| passport-local         | For handling authentication with mail and password |
+| validator              | For validating and sanitizing request data         |
 
 
 ### devDependencies
-| nodemon  | For restarting server on change  |
+| Package | Description                     |
+| ------- | ------------------------------- |
+| nodemon | For restarting server on change |
 
 Deployment
 ----------
@@ -186,7 +186,7 @@ That said you might find these instructions helpful:
 
 ### Deployment to Heroku
 
-<img src="https://upload.wikimedia.org/wikipedia/en/a/a9/Heroku_logo.png" width="200">
+<img src="https://www.fullstackpython.com/img/logos/heroku.png" width="200">
 
 - Download and install [Heroku Toolbelt](https://toolbelt.heroku.com/)
 - In a terminal, run `heroku login` and enter your Heroku credentials
