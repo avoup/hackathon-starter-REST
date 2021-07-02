@@ -16,15 +16,15 @@ tmp
 # Optional npm cache directory
 .npm
 
-#Build
-.nyc_output/*
-
 # API keys and secrets
 .env
 
 # Dependency directory
 node_modules
 bower_components
+
+# Uploads
+uploads/*
 
 # Editors
 .idea

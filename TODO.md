@@ -1,5 +1,8 @@
 - XSS sanitize
 - JSON:API responses **done**
 - oAuths
-- file upload
-- resend email verification
+    - facebook
+- file upload **done**
+- resend email verification **done**
+- tests
+- email verification solution

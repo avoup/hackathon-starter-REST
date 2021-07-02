@@ -10,7 +10,6 @@ dotenv.config({ path: '.env.example' });
 
 const passportConfig = require('./config/passport');
 
-
 const chalk = require('chalk')
 
 /**
@@ -23,7 +22,7 @@ mongoose.set('useUnifiedTopology', true);
 mongoose.connect(process.env.MONGODB_URI);
 mongoose.connection.on('error', (err) => {
     console.error(err);
-    console.log('%s error connecting to MongoDB.');
+    console.log(chalk.red('%s error connecting to MongoDB.'));
     process.exit();
 });
 
@@ -32,7 +31,6 @@ mongoose.connection.on('error', (err) => {
  */
 const app = express();
 
-app.set('json:api', false); // JSON:API header check, false: will not check
 app.set('host', process.env.OPENSHIFT_NODEJS_IP || '0.0.0.0');
 app.set('port', process.env.PORT || process.env.OPENSHIFT_NODEJS_PORT || 8080);
 app.set(compression());
@@ -40,7 +38,7 @@ app.set(compression());
 app.use(cors({
     allowedHeaders: 'Content-Type,Authorization',
 }));
-app.use(express.json({ type: 'application/vnd.api+json' }));
+app.use(express.json({ type: process.env.CONTENT_TYPE_HEADER }));
 app.use(passport.initialize());
 app.use(helmet.frameguard())
 app.use(helmet.hidePoweredBy())
@@ -49,68 +47,86 @@ app.use(helmet.noSniff())
 app.use(helmet.permittedCrossDomainPolicies())
 
 /**
- * JSON:API headers
- * check headers according to JSON:API specification
+ * Check headers
  */
-if (app.get('json:api')) {
-    app.use((req, res, next) => {
-        res.setHeader('Content-Type', 'application/vnd.api+json')
+app.use((req, res, next) => {
+    res.setHeader('Content-Type', process.env.CONTENT_TYPE_HEADER)
 
-        if (req.get('Content-Type') !== 'application/vnd.api+json') {
-            const err = new Error('Unsupported Media Type')
-            err.statusCode = 415;
-            err.title = 'Unsupported Media Type',
-                err.detail = `Content-Type header should be: 'application/vnd.api+json'`
-            throw err;
-        }
+    if (req.get('Content-Type') !== process.env.CONTENT_TYPE_HEADER && req.get('Content-Type') !== 'multipart/form-data') {
+        const error = new Error('Unsupported Media Type');
+        error.statusCode = 415;
+        error.title = 'Unsupported Media Type';
+        error.detail = `Content-Type header should be: ${process.env.CONTENT_TYPE_HEADER}, header provided: ${req.get('Content-Type')}`;
+        return next(error);
+    }
 
-        const accept = req.get('Accept');
-        if (accept && accept !== 'application/vnd.api+json') {
-            const err = new Error('Unsupported Media Type')
-            err.statusCode = 406;
-            err.title = 'Not Acceptable',
-                err.detail = `Accept header should be: 'application/vnd.api+json'`
-            throw err;
-        }
-        
-        next()
-    })
-}
+    const accept = req.get('Accept');
+    if (accept && accept !== process.env.CONTENT_TYPE_HEADER && req.get('Content-Type') !== 'multipart/form-data') {
+        const error = new Error('Unsupported Media Type');
+        error.statusCode = 406;
+        error.title = 'Not Acceptable';
+        error.detail = `Accept header should be: ${process.env.CONTENT_TYPE_HEADER}, header provided: ${req.get('Accept')}`;
+        return next(error);
+    }
+
+    next()
+})
 
 
-app.use(express.static('examples')) // Remove in production
+/**
+ * Access to example files
+ * Remove in production
+ */
+app.use(express.static('examples'))
 
 // Import routes
 const authRoutes = require('./routes/auth')
 const oauthRoutes = require('./routes/oauth')
+const apiRoutes = require('./routes/api')
 
+// Routes
 // Remove in production
 app.get('/', (req, res, next) => {
-    res.status(200).json({
-        data: {
-            type: 'Hello',
-            attributes: {
-                detail: 'you reached hackathon starter api'
-            }
-        }
-    })
+    res.status(200).json({ message: 'Hello, you reached hackathon starter api' })
 })
 
 // Remove in production
 app.get('/secure', passportConfig.isAuthenticated, (req, res, next) => {
-    res.status(200).json({
-        data: {
-            type: 'secure',
-            attributes: {
-                detail: 'you reached hackathon starter secure route'
-            }
-        }
-    })
+    res.status(200).json({ message: 'Hello, you reached hackathon starter secure route' })
 })
 
-// Use routes
+/**
+ * Check if post request body contains necessary objects
+ */
+app.post('*', (req, res, next) => {
+    if (!req.body.data || !req.body.data.attributes) {
+        const error = new Error();
+        error.code = 401;
+        error.errors = [{
+            status: 401,
+            title: 'Error',
+            detail: `Request should contain 'data' and 'data.attributes' objects`
+        }]
+        return next(error)
+    }
+    next()
+})
+
 app.use('/auth', authRoutes);
 app.use('/oauth', oauthRoutes);
+app.use('/api', apiRoutes);
+
+// 404 handler
+app.use('*', (req, res, next) => {
+    const error = new Error();
+    error.code = 404;
+    error.errors = [{
+        status: 404,
+        title: 'Error',
+        detail: 'Requested URL cannot be found'
+    }]
+    return next(error)
+})
 
 
 /**
@@ -118,12 +134,12 @@ app.use('/oauth', oauthRoutes);
  */
 app.use((error, req, res, next) => {
     console.log(chalk.redBright('----GLOBAL ERROR HANDLER----'))
-    // console.log(error);
+    console.log(error);
+    console.log(chalk.redBright('----ERROR END-----'))
     res.status(error.code || 500).json({
         meta: { path: req.originalUrl },
         errors: error.errors || [error]
     })
-    console.log(chalk.redBright('----ERROR END-----'))
 })
 
 

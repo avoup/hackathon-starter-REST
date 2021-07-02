@@ -8,32 +8,73 @@ const User = require('../models/User');
 const chalk = require('chalk')
 
 /**
+ *  Send verification email
+ * 
+ */
+const sendVerify = (userId, redirectURL, toEmail) => {
+    const token = jwt.sign(
+        {
+            _id: userId,
+        },
+        process.env.JWT_EMAIL_SECRET,
+        { expiresIn: process.env.JWT_EMAIL_EXPIRE }
+    );
+
+    // Send verification email
+    const msg = {
+        to: toEmail,
+        from: 'no-reply@signlegaly.com',
+        subject: 'HSR Email verification',
+        html: `<html>
+                <strong>Follow this link to verify your email:</strong> 
+                <a href='${redirectURL}?token=${token}'>verify</a>
+            </html>`,
+    }
+    return sendMail(msg)
+}
+
+/**
  * POST /login
  * JWT sign in using email and password.
  */
 exports.postLogin = (req, res, next) => {
+    req.body.email = req.body.data.attributes.email;
+    req.body.password = req.body.data.attributes.password;
+
     const validationErrors = [];
-    if (!validator.isEmail(req.body.email)) validationErrors.push({
-        source: { pointer: req.originalUrl },
-        status: '422',
-        title: 'validationerror',
-        detail: 'Email address is not valid.',
-    });
-    if (validator.isEmpty(req.body.password)) validationErrors.push({
-        source: { pointer: req.originalUrl },
-        status: '422',
-        title: 'validationerror',
-        detail: 'Password cannot be blank.'
-    });
+    if (!req.body.email || req.body.email && !validator.isEmail(req.body.email)) {
+        validationErrors.push({
+            source: { pointer: 'data/attributes/email' },
+            status: '422',
+            title: 'validationerror',
+            detail: 'Email address is not valid.',
+        });
+    }
+    if (!req.body.password || req.body.password && validator.isEmpty(req.body.password)) {
+        validationErrors.push({
+            source: { pointer: 'data/attributes/password' },
+            status: '422',
+            title: 'validationerror',
+            detail: 'Password cannot be blank.'
+        });
+    }
 
     if (validationErrors.length) {
-        return res.status(422).json({ errors: validationErrors })
+        const error = new Error()
+        error.code = 422
+        error.errors = validationErrors
+        return next(error)
     }
     req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
 
     passport.authenticate('local', { session: false }, (err, user, info) => {
         if (err) { return next(err); }
-        if (!user) { return res.status(401).json({ errors: [info] }) }
+        if (!user) {
+            const error = new Error();
+            error.code = 401;
+            error.errors = [info];
+            return next(error)
+        }
 
         req.logIn(user, { session: false }, (err) => {
             if (err) { return next(err); }
@@ -64,6 +105,11 @@ exports.postLogin = (req, res, next) => {
  * Create a new local account.
  */
 exports.postSignup = (req, res, next) => {
+    req.body.email = req.body.data.attributes.email;
+    req.body.password = req.body.data.attributes.password;
+    req.body.confirmPassword = req.body.data.attributes.confirmPassword;
+    req.body.redirect = req.body.data.attributes.redirect;
+
     const validationErrors = [];
     if (!req.body.email || !validator.isEmail(req.body.email)) validationErrors.push({
         source: { pointer: '/data/attributes/email' },
@@ -133,47 +179,19 @@ exports.postSignup = (req, res, next) => {
              * *DO NOT use verifyEmail url as email verification page,
              *     as it is not a webpage it will return a json response.
              */
-
-            const token = jwt.sign(
-                {
-                    _id: newUser._id,
-                },
-                process.env.JWT_EMAIL_SECRET,
-                { expiresIn: process.env.JWT_EMAIL_EXPIRE }
-            );
-            req.body.redirect = req.body.redirect ? req.body.redirect : process.env.BASE_URL + `/auth/verify`;
-
-            // Send verification email
-            const msg = {
-                to: 'avoup.g@gmail.com',
-                from: 'no-reply@signlegaly.com',
-                subject: 'HSR Email verification',
-                html: `<html>
-                        <strong>Follow this link to verify your email:</strong> 
-                        <a href='${req.body.redirect}?token=${token}'>verify</a>
-                    </html>`,
-            }
-            sendMail(msg)
+            sendVerify(newUser._id, req.body.redirect ? req.body.redirect : process.env.BASE_URL + `/auth/verify`, req.body.email)
                 .then(() => res.status(204).json())
                 .catch(err => next(err));
-            /**
-             * If you don't want to use email verification 
-             *  remove token and msg variables
-             *  and replace above sendMail()
-             *  function with a response:
-             *      res.status(204).json()
-             */
         });
     });
 };
-
 
 /**
  * GET /verify
  * Verify email via JWT
  */
 exports.verifyEmail = (req, res, next) => {
-    const token = jwt.verify(req.query.token, process.env.JWT_EMAIL_SECRET, (err, token) => {
+    jwt.verify(req.query.token, process.env.JWT_EMAIL_SECRET, (err, token) => {
         if (err) {
             const error = new Error();
             error.code = 401;
@@ -184,48 +202,52 @@ exports.verifyEmail = (req, res, next) => {
             }]
             return next(error);
         }
-        return token;
-    });
-    User.findById(token._id, (err, user) => {
-        if (err) return next(err);
-        if (!user) {
-            const error = new Error();
-            error.code = 404;
-            error.errors = [{
-                status: 404,
-                title: 'notfound',
-                detail: 'User with given id not found'
-            }]
-            return next(error);
-        }
-        if (user.isVerified) {
-            const error = new Error();
-            error.code = 422;
-            error.errors = [{
-                status: 422,
-                title: 'verificationerror',
-                detail: 'User is already verified'
-            }]
-            return next(error);
-        }
-        user.isVerified = true;
-        user.save();
 
-        res.status(200).json({
-            data: {
-                type: 'notification',
-                attributes: {
-                    detail: 'User verified successfully'
-                }
+        User.findById(token._id, (err, user) => {
+            if (err) return next(err);
+            if (!user) {
+                const error = new Error();
+                error.code = 404;
+                error.errors = [{
+                    status: 404,
+                    title: 'notfound',
+                    detail: 'User with given id not found'
+                }]
+                return next(error);
             }
+            if (user.isVerified) {
+                const error = new Error();
+                error.code = 422;
+                error.errors = [{
+                    status: 422,
+                    title: 'verificationerror',
+                    detail: 'User is already verified'
+                }]
+                return next(error);
+            }
+            user.isVerified = true;
+            user.save();
+
+            res.status(200).json({
+                data: {
+                    type: 'notification',
+                    attributes: {
+                        detail: 'User verified successfully'
+                    }
+                }
+            })
         })
-    })
+    });
 }
 
 /**
- * GET /forgot
+ * POST /resend
+ * Resend verification email.
  */
-exports.forgotPassword = (req, res, next) => {
+exports.resendVerify = (req, res, next) => {
+    req.body.email = req.body.data.attributes.email;
+    req.body.redirect = req.body.data.attributes.redirect;
+
     const validationErrors = [];
     if (!req.body.email || !validator.isEmail(req.body.email)) validationErrors.push({
         source: { pointer: '/data/attributes/email' },
@@ -233,21 +255,101 @@ exports.forgotPassword = (req, res, next) => {
         title: 'validationerror',
         detail: 'Email address is invalid.'
     });
-
-    /**
-     * Check if custom email verification url is provided
-     * 
-     *  If provided url will be sent to user's email:
-     *      https://custom.url/?token=<json-web-token>
-     *      and it should make a request to '/verify' to verify email.
-     *  
-     * */  
+    // Email verification page url    
     if (req.body.redirect && !validator.isURL(req.body.redirect)) validationErrors.push({
         source: { pointer: '/data/attributes/redirect' },
         status: 422,
         title: 'validationerror',
         detail: 'Redirect is not a valid URL'
     });
+
+    if (validationErrors.length) {
+        const error = new Error()
+        error.code = 422;
+        error.errors = validationErrors;
+        return next(error)
+    }
+    req.body.email = validator.normalizeEmail(req.body.email, { gmail_remove_dots: false });
+
+    User.findOne({ email: req.body.email }, (err, existingUser) => {
+        if (err) { return next(err); }
+        if (!existingUser) {
+            const error = new Error()
+            error.code = 404;
+            error.errors = [{
+                status: '404',
+                title: 'notfound',
+                detail: 'Account with that email address does not exist.'
+            }]
+            return next(error)
+        }
+        if (existingUser.isVerified) {
+            const error = new Error()
+            error.code = 422;
+            error.errors = [{
+                status: '422',
+                title: 'Error',
+                detail: 'Email is already verified.'
+            }]
+            return next(error)
+        }
+
+        sendVerify(
+            existingUser._id,
+            req.body.redirect ? req.body.redirect : process.env.BASE_URL + `/auth/verify`,
+            req.body.email
+        )
+            .then(() => res.status(204).json())
+            .catch(err => next(err));
+
+    });
+};
+
+/**
+ * GET /forgot
+ * Request password reset.
+ */
+exports.forgotPassword = (req, res, next) => {
+    req.body.email = req.body.data.attributes.email;
+    req.body.redirect = req.body.data.attributes.redirect;
+
+    const validationErrors = [];
+    if (!req.body.email || !validator.isEmail(req.body.email)) {
+        validationErrors.push({
+            source: { pointer: '/data/attributes/email' },
+            status: 422,
+            title: 'validationerror',
+            detail: 'Email address is invalid.'
+        });
+    }
+
+    /**
+     * Check if custom email verification url is provided
+     * 
+     *  If provided, url will be sent to user's email:
+     *      <custom-url>?token=<json-web-token>
+     *      and it should make a request to '/reset' to reset password.
+     *      e.g:
+     *      {
+     *          "data":{ 
+     *              "attributes":{
+     *                  "token": <json-web-token>,
+     *                  "password": <password>,
+     *                  "confirmPassword": <confirmPassword>,
+     *              }
+     *          }
+     *      }
+     *  if not provided, redirect will be an example html file at '/password-reset'
+     *  
+     * */
+    if (req.body.redirect && !validator.isURL(req.body.redirect, { protocols: ['http', 'https'], require_protocol: true, require_tld: false })) {
+        validationErrors.push({
+            source: { pointer: '/data/attributes/redirect' },
+            status: 422,
+            title: 'validationerror',
+            detail: 'Redirect is not a valid URL'
+        });
+    }
 
     if (validationErrors.length) {
         const error = new Error()
@@ -269,7 +371,7 @@ exports.forgotPassword = (req, res, next) => {
             return next(error)
         }
         // Set redirect url
-        req.body.redirect = req.body.redirect ? req.body.redirect : process.env.BASE_URL + `/auth/reset`;
+        req.body.redirect = req.body.redirect ? req.body.redirect : process.env.BASE_URL + `/password-reset`;
 
         const token = jwt.sign(
             {
@@ -279,7 +381,7 @@ exports.forgotPassword = (req, res, next) => {
             { expiresIn: process.env.JWT_PASSWORD_RESET_EXPIRE }
         );
         const msg = {
-            to: 'avoup.g@gmail.com',
+            to: req.body.email,
             from: 'no-reply@signlegaly.com',
             subject: 'HSR password reset',
             html: `<html>
@@ -293,29 +395,41 @@ exports.forgotPassword = (req, res, next) => {
     });
 }
 /**
- * GET /resetPassword
+ * GET /reset
+ * Reset password
  */
 exports.resetPassword = (req, res, next) => {
+    req.body.password = req.body.data.attributes.password;
+    req.body.confirmPassword = req.body.data.attributes.confirmPassword;
+    req.body.redirect = req.body.data.attributes.redirect;
+    req.body.token = req.body.data.attributes.token;
+
     const validationErrors = [];
-    if (!req.body.password || !validator.isLength(req.body.password, { min: 4 })) validationErrors.push({
-        source: { pointer: '/data/attributes/password' },
-        status: 422,
-        title: 'validationerror',
-        detail: 'Password must be at least 4 characters long',
-    });
-    if (!req.body.confirmPassword || req.body.password !== req.body.confirmPassword) validationErrors.push({
-        source: { pointer: '/data/attributes/confirmPassword' },
-        status: 422,
-        title: 'validationerror',
-        detail: 'Passwords do not match'
-    });
+    if (!req.body.password || !validator.isLength(req.body.password, { min: 4 })) {
+        validationErrors.push({
+            source: { pointer: '/data/attributes/password' },
+            status: 422,
+            title: 'validationerror',
+            detail: 'Password must be at least 4 characters long',
+        });
+    }
+    if (!req.body.confirmPassword || req.body.password !== req.body.confirmPassword) {
+        validationErrors.push({
+            source: { pointer: '/data/attributes/confirmPassword' },
+            status: 422,
+            title: 'validationerror',
+            detail: 'Passwords do not match'
+        });
+    }
     // Email verification page url    
-    if (req.body.redirect && !validator.isURL(req.body.redirect)) validationErrors.push({
-        source: { pointer: '/data/attributes/redirect' },
-        status: 422,
-        title: 'validationerror',
-        detail: 'Redirect is not a valid URL'
-    });
+    if (req.body.redirect && !validator.isURL(req.body.redirect)) {
+        validationErrors.push({
+            source: { pointer: '/data/attributes/redirect' },
+            status: 422,
+            title: 'validationerror',
+            detail: 'Redirect is not a valid URL'
+        });
+    }
 
     if (validationErrors.length) {
         const error = new Error()
@@ -324,7 +438,7 @@ exports.resetPassword = (req, res, next) => {
         return next(error)
     }
 
-    const token = jwt.verify(req.body.token, process.env.JWT_PASSWORD_RESET_SECRET, (err, token) => {
+    jwt.verify(req.body.token, process.env.JWT_PASSWORD_RESET_SECRET, (err, token) => {
         if (err) {
             const error = new Error();
             error.code = 401;
@@ -335,41 +449,33 @@ exports.resetPassword = (req, res, next) => {
             }]
             return next(error);
         }
-        return token;
-    });
-    User.findById(token._id, (err, user) => {
-        if (err) return next(err);
-        if (!user) {
-            const error = new Error();
-            error.code = 404;
-            error.errors = [{
-                status: 404,
-                title: 'notfound',
-                detail: 'User not found'
-            }]
-            return next(error);
-        }
-        if (!user.isVerified) { // Forbid reset if user is not verified
-            const error = new Error();
-            error.code = 401;
-            error.errors = [{
-                status: 401,
-                title: 'verificationerror',
-                detail: 'User is not verified! Verify first and then try resetting password!'
-            }]
-            return next(error);
-        }
-        user.password = req.body.password;
-        user.save();
 
-        res.status(200).json({
-            data: {
-                type: 'notification',
-                attributes: {
-                    detail: 'Password changed successfully'
-                }
+        User.findById(token._id, (err, user) => {
+            if (err) return next(err);
+            if (!user) {
+                const error = new Error();
+                error.code = 404;
+                error.errors = [{
+                    status: 404,
+                    title: 'notfound',
+                    detail: 'User not found'
+                }]
+                return next(error);
             }
-        })
-    })
+            if (!user.isVerified) { // Forbid reset if user is not verified
+                const error = new Error();
+                error.code = 401;
+                error.errors = [{
+                    status: 401,
+                    title: 'verificationerror',
+                    detail: 'User is not verified! Verify first and then try resetting password!'
+                }]
+                return next(error);
+            }
+            user.password = req.body.password;
+            user.save();
 
+            res.status(204).json()
+        })
+    });
 }

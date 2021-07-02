@@ -67,7 +67,7 @@ exports.googleAuth = (req, res, next) => {
         }
 
         if (err) return res.send(response(err));
-        if (!user) return res.send(response({ code: '401', errors: [{ status: '401', title: 'unknownerror', details: 'Unknown error occured. Try again later!'}]}));
+        if (!user) return res.send(response({ code: '401', errors: [{ status: '401', title: 'error', details: 'Unknown error occured. Try again later!'}]}));
 
         const token = jwt.sign(
             {

@@ -6,13 +6,6 @@ const userSchema = new mongoose.Schema({
   password: String,
   isVerified: Boolean,
 
-  // deprecated
-  passwordResetToken: String,
-  passwordResetExpires: Date,
-  emailVerificationToken: String,
-  emailVerified: Boolean,
-  // -- /deprecated
-
   snapchat: String,
   facebook: String,
   twitter: String,

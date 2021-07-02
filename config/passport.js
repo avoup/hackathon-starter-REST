@@ -6,6 +6,7 @@ const GoogleStrategy = require('passport-google-oauth2').Strategy;
 const User = require('../models/User');
 
 const chalk = require('chalk')
+
 /**
  * Sign in using Email and Password.
  */
@@ -90,7 +91,6 @@ exports.isAuthenticated = (req, res, next) => {
 /**
  * Google oAuth 2
  */
-
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_ID,
     clientSecret: process.env.GOOGLE_SECRET,

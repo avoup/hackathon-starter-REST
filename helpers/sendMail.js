@@ -12,6 +12,9 @@ const sgMail = require('@sendgrid/mail')
  * @returns Promise
  */
 module.exports = (msg) => {
+    if (process.env.NODE_ENV !== 'production') {
+        msg.to = 'test@mail.com';
+    }
     sgMail.setApiKey(process.env.SENDGRID_API_KEY)
     const mail = new Promise((resolve, reject) => {
         sgMail
