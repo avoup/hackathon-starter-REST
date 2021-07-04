@@ -9,5 +9,5 @@ cache:
     - "node_modules"
 install:
   - npm install
-test: 
+script: 
   - npm test
