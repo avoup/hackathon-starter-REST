@@ -11,7 +11,7 @@ Inspired by https://github.com/sahat/hackathon-starter
 
 A boilerplate for **Node.js** REST api.
 
-Best part of working on a project is the 'meaty' part of it, but you have to go through setting up a project and adding all necessary features like authentication with json web token, social authentication, deciding on json request/response format and the list goes on.
+When starting a new project until you get to the best part of it you have to go through setting it up and adding all the necessary features like authentication with json web token, social authentication, deciding on json request/response format and the list goes on.
 
 Goal of hackathon-starter-REST (HSR) is to skip through all this steps and get to the interesting part of a project quicker.
 
@@ -31,6 +31,10 @@ Table of Contents
   - [List of Packages](#list-of-packages)
     - [Dependencies](#dependencies)
     - [devDependencies](#devdependencies)
+  - [API Endpoints, requests and responses](#api-endpoints-requests-and-responses)
+    - [Login](#login)
+    - [Signup](#signup)
+    - [Resend verification mail](#resend-verification-mail)
   - [Deployment](#deployment)
     - [Deployment to Heroku](#deployment-to-heroku)
     - [Hosted MongoDB Atlas](#hosted-mongodb-atlas)
@@ -67,7 +71,7 @@ Prerequisites
 Getting Started
 ---------------
 
-In your IDE terminal type:
+In your terminal type:
 
 ```bash
 # Clone from Github
@@ -89,7 +93,9 @@ npm run dev
 API Keys
 ------------------
 
-In order to use OAuth methods and APIs in project, you will have to obtain credentials and set them as environment variables in .env file.
+In order to use OAuth methods and APIs in the project, you will have to obtain credentials and set them as environment variables in .env file.
+
+**Note:** The app will read environment variables from .env file not .env.example file. You can use.env.example file to set up your .env file. 
 
 <hr>
 
@@ -139,9 +145,9 @@ Project Structure
 | **config**/passport.js | Passport authentication strategies.                          |
 | **controllers**/       | Controllers.                                                 |
 | **models**/User.js     | Mongoose schema and model for User.                          |
-| .env.example           | Environmental variables.                                     |
-| .gitignore             | Folder and files ignored by git.                             |
-| .travis.yml            | Configuration files for continuous integration.              |
+| .env.example           | Environmental variables example file.                        |
+| .gitignore             | Folder and files to be ignored by git.                       |
+| .travis.yml            | Configuration file for build and test on travis-ci.          |
 | app.js                 | The main application file.                                   |
 | package.json           | NPM dependencies.                                            |
 | package-lock.json      | Contains exact versions of NPM dependencies in package.json. |
@@ -154,7 +160,7 @@ List of Packages
 | Package                | Description                                        |
 | ---------------------- | -------------------------------------------------- |
 | @sendgrid/mail         | Library for using Sendgrid api                     |
-| bcryptjs               | Library for hashing and salting user passwords.    |
+| bcryptjs               | Library for hashing and salting user passwords     |
 | chalk                  | For stileing terminal output.                      |
 | compression            | For compressing response data                      |
 | cors                   | For enabling cors                                  |
@@ -173,9 +179,168 @@ List of Packages
 
 
 ### devDependencies
-| Package | Description                     |
-| ------- | ------------------------------- |
-| nodemon | For restarting server on change |
+| Package   | Description                            |
+| --------- | -------------------------------------- |
+| chai      | Assertion library                      |
+| mocha     | Test framework                         |
+| nodemon   | For restarting server on change        |
+| sinon     | Standalone test spies, stubs and mocks |
+| supertest | HTTP testing                           |
+
+API Endpoints, requests and responses
+----------
+### Login
+`POST /auth/login` - Post email and password and get jwt token
+
+Request:
+```json
+Content-Type: application/json
+Accept: application/json
+
+{
+  "data": {
+    "attributes": {
+      "email": "some@mail.com",
+      "password": "1234"
+    }
+  }
+}
+```
+<span style="color:green">**Success**</span> response:
+```json
+Content-Type: application/json
+201 OK
+
+{
+  "data": {
+    "type": "jwt bearer token",
+    "id": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MGUyMjM2YzhjNDFmYTEyY2NkOTI5MmUiLCJlbWFpbCI6IjMxZ0BnbWFpbC5jb20iLCJpYXQiOjE2MjU0MzI5NjEsImV4cCI6MTYyNTQzNjU2MX0.UKymfLvZVC-T14fHm0u-Cvn8dMpylghMN0B9VKgRN9E",
+    "attributes": {
+      "expiresIn": "1h"
+    }
+  }
+}
+```
+<span style="color:red">**Fail**</span> response:
+```json
+Content-Type: application/json
+401 Unauthorized
+
+{
+    "meta": {
+        "path": "/auth/login"
+    },
+    "errors": [
+        {
+            "status": "422",
+            "title": "validationerror",
+            "detail": "Invalid password."
+        }
+    ]
+}
+```
+### Signup
+`POST /auth/signup` - Registers user and sends verification email, user won't be able to login until email is verified. It can be disabled by not calling ```sendVerify``` function in signup controller and setting ```isVerified: true``` when creating new user.
+| Property          | Description                         |
+| ----------------- | ----------------------------------- |
+| email *           | email address                       |
+| password *        | password                            |
+| confirmPassword * | confirm password                    |
+| redirect          | URL for email verification redirect |
+
+\* - required property
+
+Request:
+```json
+Content-Type: application/json
+Accept: application/json
+
+{
+  "data": {
+    "attributes": {
+        "email": "some@mail.com",
+        "password": "1234",
+        "confirmPassword": "1234",
+        "redirect": "http://domain.com/"
+    }
+  }
+}
+```
+<span style="color:green">**Success**</span> response:
+```json
+204 No Content
+```
+
+<span style="color:red">**Fail**</span> response:
+```json
+Content-Type: application/json
+422 Unprocessable Entity
+
+{
+    "meta": {
+        "path": "/auth/signup"
+    },
+    "errors": [
+        {
+            "source": {
+                "pointer": "/data/attributes/confirmPassword"
+            },
+            "status": 422,
+            "title": "validationerror",
+            "detail": "Passwords do not match"
+        }
+    ]
+}
+```
+
+### Resend verification mail
+`POST /auth/resend` - Resends verification mail. It's using jwt token. As you can't manually invalidate jwt token, previously sent tokens will be valid too until they expire, expiration time can be set in .env file.
+
+| Property          | Description                         |
+| ----------------- | ----------------------------------- |
+| email *           | email address                       |
+| redirect          | URL for email verification redirect |
+
+\* - required properties
+
+Request:
+```json
+Content-Type: application/json
+Accept: application/json
+
+{   
+  "data": {
+    "type": "users",
+    "attributes": {
+        "email": "some@mail.com",
+        "redirect": "http://domain.com/"
+    }
+  }
+}
+```
+<span style="color:green">**Success**</span> response:
+```json
+204 No Content
+```
+
+<span style="color:red">**Fail**</span> response:
+```json
+Content-Type: application/json
+422 Unprocessable Entity
+
+{
+    "meta": {
+        "path": "/auth/resend"
+    },
+    "errors": [
+        {
+            "status": "422",
+            "title": "Error",
+            "detail": "Email is already verified."
+        }
+    ]
+}
+```
 
 Deployment
 ----------
