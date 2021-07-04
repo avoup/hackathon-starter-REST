@@ -160,7 +160,7 @@ exports.postSignup = (req, res, next) => {
         const user = new User({
             email: req.body.email,
             password: req.body.password,
-            isVerified: false,
+            isVerified: process.env.NODE_ENV === 'test',
         });
         user.save((err, newUser) => {
             if (err) { return next(err); }

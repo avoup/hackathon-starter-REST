@@ -6,7 +6,7 @@ const dotenv = require('dotenv');
 const helmet = require('helmet');
 const passport = require('passport');
 
-dotenv.config({ path: '.env.example' });
+dotenv.config({ path: '.env' });
 
 const passportConfig = require('./config/passport');
 
@@ -19,7 +19,7 @@ mongoose.set('useFindAndModify', false);
 mongoose.set('useCreateIndex', true);
 mongoose.set('useNewUrlParser', true);
 mongoose.set('useUnifiedTopology', true);
-mongoose.connect(process.env.MONGODB_URI);
+mongoose.connect(process.env.NODE_ENV === 'test' ? process.env.MONGODB_URI_TEST : process.env.MONGODB_URI);
 mongoose.connection.on('error', (err) => {
     console.error(err);
     console.log(chalk.red('%s error connecting to MongoDB.'));
@@ -133,9 +133,11 @@ app.use('*', (req, res, next) => {
  * Error Handler
  */
 app.use((error, req, res, next) => {
-    console.log(chalk.redBright('----GLOBAL ERROR HANDLER----'))
-    console.log(error);
-    console.log(chalk.redBright('----ERROR END-----'))
+    if (process.env.NODE_ENV !== 'test') {
+        console.log(chalk.redBright('----GLOBAL ERROR HANDLER----'))
+        console.log(error);
+        console.log(chalk.redBright('----ERROR END-----'))
+    }
     res.status(error.code || 500).json({
         meta: { path: req.originalUrl },
         errors: error.errors || [error]
