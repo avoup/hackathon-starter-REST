@@ -32,9 +32,12 @@ Table of Contents
     - [Dependencies](#dependencies)
     - [devDependencies](#devdependencies)
   - [API Endpoints, requests and responses](#api-endpoints-requests-and-responses)
-    - [Login](#login)
-    - [Signup](#signup)
-    - [Resend verification mail](#resend-verification-mail)
+  - [### Login](#-login)
+  - [### Signup](#-signup)
+  - [### Resend verification mail](#-resend-verification-mail)
+  - [### Verify email](#-verify-email)
+  - [### Forgot password](#-forgot-password)
+  - [### Reset password](#-reset-password)
   - [Deployment](#deployment)
     - [Deployment to Heroku](#deployment-to-heroku)
     - [Hosted MongoDB Atlas](#hosted-mongodb-atlas)
@@ -189,8 +192,12 @@ List of Packages
 
 API Endpoints, requests and responses
 ----------
+
 ### Login
+---
 `POST /auth/login` - Post email and password and get jwt token
+
+Controller: `controllers/auth.js - postLogin`
 
 Request:
 ```json
@@ -214,7 +221,7 @@ Content-Type: application/json
 {
   "data": {
     "type": "jwt bearer token",
-    "id": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2MGUyMjM2YzhjNDFmYTEyY2NkOTI5MmUiLCJlbWFpbCI6IjMxZ0BnbWFpbC5jb20iLCJpYXQiOjE2MjU0MzI5NjEsImV4cCI6MTYyNTQzNjU2MX0.UKymfLvZVC-T14fHm0u-Cvn8dMpylghMN0B9VKgRN9E",
+    "id": "<JWT.TOKEN>",
     "attributes": {
       "expiresIn": "1h"
     }
@@ -239,8 +246,13 @@ Content-Type: application/json
     ]
 }
 ```
+
 ### Signup
+---
 `POST /auth/signup` - Registers user and sends verification email, user won't be able to login until email is verified. It can be disabled by not calling ```sendVerify``` function in signup controller and setting ```isVerified: true``` when creating new user.
+
+Controller: `controllers/auth.js - postSignup`
+
 | Property          | Description                         |
 | ----------------- | ----------------------------------- |
 | email *           | email address                       |
@@ -294,12 +306,15 @@ Content-Type: application/json
 ```
 
 ### Resend verification mail
+---
 `POST /auth/resend` - Resends verification mail. It's using jwt token. As you can't manually invalidate jwt token, previously sent tokens will be valid too until they expire, expiration time can be set in .env file.
 
-| Property          | Description                         |
-| ----------------- | ----------------------------------- |
-| email *           | email address                       |
-| redirect          | URL for email verification redirect |
+Controller: `controllers/auth.js - resendVerify`
+
+| Property | Description                         |
+| -------- | ----------------------------------- |
+| email *  | email address                       |
+| redirect | URL for email verification redirect |
 
 \* - required properties
 
@@ -341,6 +356,127 @@ Content-Type: application/json
     ]
 }
 ```
+
+### Verify email
+---
+`GET /auth/verify?token=<jwt.token>` - Verifies mail if valid jwt token is provided.
+
+Controller: `controllers/auth.js - verifyEmail`
+
+| Query   | Description |
+| ------- | ----------- |
+| token * | JWT token   |
+
+\* - required properties
+
+### Forgot password
+---
+`POST /auth/forgot` - If account with the provided email exists sends password reset token to that email.
+
+Controller: `controllers/auth.js - forgotPassword`
+
+| Property | Description                     |
+| -------- | ------------------------------- |
+| email *  | email address                   |
+| redirect | URL for password reset redirect |
+
+\* - required properties
+
+**Note**: redirect page should be capable of extracting query `?token` from url and making POST request for password reset (see `POST /auth/reset`). 
+
+
+Request:
+```json
+Content-Type: application/json
+Accept: application/json
+
+{   
+  "data": {
+    "attributes": {
+        "email": "some@mail.com",
+        "redirect": "http://somedomain.com/password-reset/"
+    }
+  }
+}
+```
+<span style="color:green">**Success**</span> response:
+```json
+204 No Content
+```
+
+<span style="color:red">**Fail**</span> response:
+```json
+Content-Type: application/json
+422 Unprocessable Entity
+
+{
+    "meta": {
+        "path": "/auth/forgot"
+    },
+    "errors": [
+        {
+            "status": "404",
+            "title": "notfound",
+            "detail": "Account with that email address was not found"
+        }
+    ]
+}
+```
+
+### Reset password
+---
+`POST /auth/reset` - Resets password. Forgot password request adds `?token` query to redirect url. It should be extracted by password reset page and put into post body (example can be seen in `examples/password-reset/` directory).
+
+Controller: `controllers/auth.js - resetPassword`
+
+
+| Property          | Description                     |
+| ----------------- | ------------------------------- |
+| password *        | new password                    |
+| confirmPassword * | confirm new password            |
+| token *           | JWT password reset token        |
+
+\* - required properties
+
+Request:
+```json
+Content-Type: application/json
+Accept: application/json
+
+{   
+  "data": {
+    "attributes": {
+        "password": "1234",
+        "confirmPassword": "1234",
+        "token": "<JWT.TOKEN>"
+    }
+  }
+}
+```
+<span style="color:green">**Success**</span> response:
+```json
+204 No Content
+```
+
+<span style="color:red">**Fail**</span> response:
+```json
+Content-Type: application/json
+401 Unauthorized
+
+{
+    "meta": {
+        "path": "/auth/reset"
+    },
+    "errors": [
+        {
+            "status": 401,
+            "title": "jwttokeninvalid",
+            "detail": "Provided jwt token is invalid"
+        }
+    ]
+}
+```
+
 
 Deployment
 ----------
