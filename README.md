@@ -32,12 +32,12 @@ Table of Contents
     - [Dependencies](#dependencies)
     - [devDependencies](#devdependencies)
   - [API Endpoints, requests and responses](#api-endpoints-requests-and-responses)
-  - [### Login](#-login)
-  - [### Signup](#-signup)
-  - [### Resend verification mail](#-resend-verification-mail)
-  - [### Verify email](#-verify-email)
-  - [### Forgot password](#-forgot-password)
-  - [### Reset password](#-reset-password)
+    - [Login](#login)
+    - [Signup](#signup)
+    - [Resend verification mail](#resend-verification-mail)
+    - [Verify email](#verify-email)
+    - [Forgot password](#forgot-password)
+    - [Reset password](#reset-password)
   - [Deployment](#deployment)
     - [Deployment to Heroku](#deployment-to-heroku)
     - [Hosted MongoDB Atlas](#hosted-mongodb-atlas)
@@ -194,7 +194,8 @@ API Endpoints, requests and responses
 ----------
 
 ### Login
----
+<hr>
+
 `POST /auth/login` - Post email and password and get jwt token
 
 Controller: `controllers/auth.js - postLogin`
@@ -248,7 +249,8 @@ Content-Type: application/json
 ```
 
 ### Signup
----
+<hr>
+
 `POST /auth/signup` - Registers user and sends verification email, user won't be able to login until email is verified. It can be disabled by not calling ```sendVerify``` function in signup controller and setting ```isVerified: true``` when creating new user.
 
 Controller: `controllers/auth.js - postSignup`
@@ -306,7 +308,8 @@ Content-Type: application/json
 ```
 
 ### Resend verification mail
----
+<hr>
+
 `POST /auth/resend` - Resends verification mail. It's using jwt token. As you can't manually invalidate jwt token, previously sent tokens will be valid too until they expire, expiration time can be set in .env file.
 
 Controller: `controllers/auth.js - resendVerify`
@@ -358,7 +361,8 @@ Content-Type: application/json
 ```
 
 ### Verify email
----
+<hr>
+
 `GET /auth/verify?token=<jwt.token>` - Verifies mail if valid jwt token is provided.
 
 Controller: `controllers/auth.js - verifyEmail`
@@ -370,7 +374,8 @@ Controller: `controllers/auth.js - verifyEmail`
 \* - required properties
 
 ### Forgot password
----
+<hr>
+
 `POST /auth/forgot` - If account with the provided email exists sends password reset token to that email.
 
 Controller: `controllers/auth.js - forgotPassword`
@@ -424,7 +429,8 @@ Content-Type: application/json
 ```
 
 ### Reset password
----
+<hr>
+
 `POST /auth/reset` - Resets password. Forgot password request adds `?token` query to redirect url. It should be extracted by password reset page and put into post body (example can be seen in `examples/password-reset/` directory).
 
 Controller: `controllers/auth.js - resetPassword`
