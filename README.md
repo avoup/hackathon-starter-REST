@@ -4,7 +4,7 @@
 Hackathon Starter REST
 =======================
 
-[![Dependency Status](https://david-dm.org/avoup/hackathon-starter-rest/status.svg?style=flat)](https://david-dm.org/avoup/hackathon-starter-rest) [![devDependencies Status](https://david-dm.org/avoup/hackathon-starter-rest/dev-status.svg)](https://david-dm.org/avoup/hackathon-starter-rest?type=dev) [![Build Status](https://travis-ci.com/avoup/hackathon-starter-rest.svg?branch=master)](https://travis-ci.com/avoup/hackathon-starter-rest)
+[![Dependency Status](https://david-dm.org/avoup/hackathon-starter-rest/status.svg?style=flat)](https://david-dm.org/avoup/hackathon-starter-rest) [![devDependencies Status](https://david-dm.org/avoup/hackathon-starter-rest/dev-status.svg)](https://david-dm.org/avoup/hackathon-starter-rest?type=dev) [![Build Status](https://travis-ci.com/avoup/hackathon-starter-rest.svg?branch=master)](https://travis-ci.com/github/avoup/hackathon-starter-rest)
 
 Inspired by https://github.com/sahat/hackathon-starter
 
